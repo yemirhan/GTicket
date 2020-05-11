@@ -618,8 +618,29 @@ repeat_schedule:
 				}
 			}
 		}//end of maxticketvalue
+		//Get a random number from 0 to maxticketvalue
+		
+		//Start of rescheduling part
 
+		//End of Rescheduling part
 
+		if((jiffies)-prev->last_reached<MIN_TIME) //Decrement ticket value
+		{
+			if(prev->tn>1)
+			{
+				prev->nr_tickets=prev->nr_tickets-1;
+				prev->last_reached=0;
+			}
+		}
+		else if((jiffies)-prev->last_reached>MAX_TIME) //Increment ticket value
+		{
+			if(prev->tn<9)
+			{
+				prev->nr_tickets=prev->nr_tickets+1;
+				prev->last_reached=0;
+			}
+		}
+	}
 	}
 	else
 	{
