@@ -607,7 +607,7 @@ repeat_schedule:
 	 * Default process to select..
 	 */
 	if (gticket_policy==1){
-		int maxticketvalue=1;
+		int maxticketvalue=0;
 		unsigned int randomnumber;
 		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
@@ -619,13 +619,26 @@ repeat_schedule:
 				}
 			}
 		}//end of maxticketvalue
+		if(maxticketvalue==0)
+			return NULL;
 
 		//Get a random number from 0 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
 		randomnumber %= maxticketvalue;  
 
 		//Start of rescheduling part
-
+		list_for_each(tmp, &runqueue_head) 
+		{
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (can_schedule(p, this_cpu))
+			{
+				if(p->nr_tickets >= maxticketvalue)
+				{
+					next=p;
+					break;
+				}
+			}
+		}
 		//End of Rescheduling part
 
 		if((jiffies)-prev->last_reached<MIN_TIME) //Decrement ticket value
