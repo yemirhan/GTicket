@@ -40,7 +40,7 @@
 extern void timer_bh(void);
 extern void tqueue_bh(void);
 extern void immediate_bh(void);
-extern int gticket_policy;
+int gticket_policy;
 
 /*
  * scheduler variables
@@ -608,6 +608,7 @@ repeat_schedule:
 	 */
 	if (gticket_policy==1){
 		int maxticketvalue=1;
+		unsigned int randomnumber;
 		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
@@ -618,15 +619,18 @@ repeat_schedule:
 				}
 			}
 		}//end of maxticketvalue
+
 		//Get a random number from 0 to maxticketvalue
-		
+		get_random_bytes(&randomnumber, sizeof(randomnumber));
+		randomnumber %= maxticketvalue;  
+
 		//Start of rescheduling part
 
 		//End of Rescheduling part
 
 		if((jiffies)-prev->last_reached<MIN_TIME) //Decrement ticket value
 		{
-			if(prev->tn>1)
+			if(prev->nr_tickets>MIN_TICKETS)
 			{
 				prev->nr_tickets=prev->nr_tickets-1;
 				prev->last_reached=0;
@@ -634,7 +638,7 @@ repeat_schedule:
 		}
 		else if((jiffies)-prev->last_reached>MAX_TIME) //Increment ticket value
 		{
-			if(prev->tn<9)
+			if(prev->nr_tickets<MAX_TICKETS)
 			{
 				prev->nr_tickets=prev->nr_tickets+1;
 				prev->last_reached=0;
