@@ -40,7 +40,8 @@
 extern void timer_bh(void);
 extern void tqueue_bh(void);
 extern void immediate_bh(void);
-int gticket_policy;
+extern int gticket_policy;
+int enflag=0;
 
 /*
  * scheduler variables
@@ -607,15 +608,38 @@ repeat_schedule:
 	 * Default process to select..
 	 */
 	if (gticket_policy==1){
+		if (enflag==0)
+		{
+			printk("Gticked enabled!");
+			enflag++;
+		}
+		list_for_each(tmp, &runqueue_head) { //Reschedule
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (can_schedule(p, this_cpu)) {
+				if((jiffies)-p->last_reached<MIN_TIME){ //Decrement ticket value
+					if(prev->nr_tickets>MIN_TICKETS){
+						p->nr_tickets=p->nr_tickets-1;
+						p->last_reached=0;
+					}
+				}
+				else if((jiffies)-p->last_reached>MAX_TIME){ //Increment ticket value
+					if(p->nr_tickets<MAX_TICKETS){
+						p->nr_tickets=p->nr_tickets+1;
+						p->last_reached=0;
+					}
+				}
+			}
+		}
+
 		int maxticketvalue=0;
 		unsigned int randomnumber;
 		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu)) {
-				if (p->nr_tickets >= maxticketnumber)
+				if (p->nr_tickets >= maxticketvalue)
 				{
-					maxticketvalue == p->nr_ticket;
+					maxticketvalue == p->nr_tickets;
 				}
 			}
 		}//end of maxticketvalue
@@ -625,6 +649,7 @@ repeat_schedule:
 		//Get a random number from 0 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
 		randomnumber %= maxticketvalue;  
+		randomnumber++;
 
 		//Start of rescheduling part
 		list_for_each(tmp, &runqueue_head) 
@@ -639,25 +664,6 @@ repeat_schedule:
 				}
 			}
 		}
-		//End of Rescheduling part
-
-		if((jiffies)-prev->last_reached<MIN_TIME) //Decrement ticket value
-		{
-			if(prev->nr_tickets>MIN_TICKETS)
-			{
-				prev->nr_tickets=prev->nr_tickets-1;
-				prev->last_reached=0;
-			}
-		}
-		else if((jiffies)-prev->last_reached>MAX_TIME) //Increment ticket value
-		{
-			if(prev->nr_tickets<MAX_TICKETS)
-			{
-				prev->nr_tickets=prev->nr_tickets+1;
-				prev->last_reached=0;
-			}
-		}
-	}
 	}
 	else
 	{

@@ -22,7 +22,6 @@
 #include <linux/namespace.h>
 #include <linux/personality.h>
 #include <linux/compiler.h>
-#include <linux/jiffies.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -664,7 +663,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->times.tms_utime = p->times.tms_stime = 0;
 	p->times.tms_cutime = p->times.tms_cstime = 0;
 	p->last_reached = jiffies;
-	p->nr_tickets = INIT_TICKETS;
+	p->nr_tickets = 8;
 #ifdef CONFIG_SMP
 	{
 		int i;
