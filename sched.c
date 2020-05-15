@@ -616,16 +616,16 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) { //Reschedule
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu)) {
-				if((jiffies)-p->last_reached<MIN_TIME){ //Decrement ticket value
+				if((jiffies*10)-p->last_reached<MIN_TIME){ //Decrement ticket value
 					if(prev->nr_tickets>MIN_TICKETS){
 						p->nr_tickets=p->nr_tickets-1;
-						p->last_reached=0;
+						p->last_reached=jiffies*10;
 					}
 				}
-				else if((jiffies)-p->last_reached>MAX_TIME){ //Increment ticket value
+				else if((jiffies*10)-p->last_reached>MAX_TIME){ //Increment ticket value
 					if(p->nr_tickets<MAX_TICKETS){
 						p->nr_tickets=p->nr_tickets+1;
-						p->last_reached=0;
+						p->last_reached=jiffies*10;
 					}
 				}
 			}
@@ -649,7 +649,6 @@ repeat_schedule:
 		//Get a random number from 0 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
 		randomnumber %= maxticketvalue;  
-		randomnumber++;
 
 		//Start of rescheduling part
 		list_for_each(tmp, &runqueue_head) 
@@ -665,7 +664,7 @@ repeat_schedule:
 			}
 		}
 	}
-	else
+	else if (gticket_policy==0)
 	{
 		next = idle_task(this_cpu);
 		c = -1000;
