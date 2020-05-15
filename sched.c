@@ -617,7 +617,7 @@ repeat_schedule:
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu)) {
 				if((jiffies*10)-p->last_reached<MIN_TIME){ //Decrement ticket value
-					if(prev->nr_tickets>MIN_TICKETS){
+					if(p->nr_tickets>MIN_TICKETS){
 						p->nr_tickets=p->nr_tickets-1;
 						p->last_reached=jiffies*10;
 					}
