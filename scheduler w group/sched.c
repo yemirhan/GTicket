@@ -556,7 +556,7 @@ asmlinkage void schedule(void)
 	struct task_struct *prev, *next, *p;
 	struct list_head *tmp;
 	int this_cpu, c;
-
+	gid_t rungid;
 
 	spin_lock_prefetch(&runqueue_lock);
 
