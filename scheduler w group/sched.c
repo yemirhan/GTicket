@@ -615,18 +615,17 @@ repeat_schedule:
 		}
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (can_schedule(p, this_cpu)) {
-				if((jiffies*10)-p->last_reached<MIN_TIME){ //Decrement ticket value
-					if(p->nr_tickets>MIN_TICKETS){
-						p->nr_tickets=p->nr_tickets-1;
-						p->last_reached=jiffies*10;
-					}
+			
+			if((jiffies)-p->last_reached<MIN_TIME){ //Decrement ticket value
+				if(p->nr_tickets>MIN_TICKETS){
+					p->nr_tickets=p->nr_tickets-1;
+					p->last_reached=jiffies;
 				}
-				else if((jiffies*10)-p->last_reached>MAX_TIME){ //Increment ticket value
-					if(p->nr_tickets<MAX_TICKETS){
-						p->nr_tickets=p->nr_tickets+1;
-						p->last_reached=jiffies*10;
-					}
+			}
+			else if((jiffies)-p->last_reached>MAX_TIME){ //Increment ticket value
+				if(p->nr_tickets<MAX_TICKETS){
+					p->nr_tickets=p->nr_tickets+1;
+					p->last_reached=jiffies;
 				}
 			}
 		}
@@ -664,14 +663,11 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) 
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (can_schedule(p, this_cpu))
+			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
 			{
-				if(p->nr_tickets >= randomnumber && p->group_flag==1)
-				{
-					next=p;
-					rungid = p->gid;
-					break;
-				}
+				next=p;
+				rungid = p->gid;
+				break;
 			}
 		}
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0

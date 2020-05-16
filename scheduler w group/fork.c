@@ -662,7 +662,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->tty_old_pgrp = 0;
 	p->times.tms_utime = p->times.tms_stime = 0;
 	p->times.tms_cutime = p->times.tms_cstime = 0;
-	p->last_reached = jiffies*10;
+	p->last_reached = jiffies;
 	p->nr_tickets = 8;
 	p->group_flag = 1;
 #ifdef CONFIG_SMP
