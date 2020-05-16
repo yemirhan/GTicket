@@ -613,7 +613,7 @@ repeat_schedule:
 			printk("Gticked enabled!");
 			enflag++;
 		}
-		list_for_each(tmp, &runqueue_head) { //Reschedule
+		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu)) {
 				if((jiffies*10)-p->last_reached<MIN_TIME){ //Decrement ticket value
@@ -631,7 +631,7 @@ repeat_schedule:
 			}
 		}
 
-		int maxticketvalue=0;
+		int maxticketvalue=0,gflagsum=0;
 		unsigned int randomnumber;
 		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
@@ -639,10 +639,19 @@ repeat_schedule:
 			if (can_schedule(p, this_cpu)) {
 				if (p->nr_tickets >= maxticketvalue)
 				{
+					gflagsum+=p->group_flag;
 					maxticketvalue = p->nr_tickets;
 				}
 			}
 		}//end of maxticketvalue
+		if (gflagsum==0)
+		{
+			list_for_each(tmp, &runqueue_head) { //Reset the group flags
+				p = list_entry(tmp, struct task_struct, run_list);
+				p->group_flag=1;
+			}//end of maxticketvalue
+		}
+		
 		if(maxticketvalue==0)
 			return NULL;
 
@@ -650,19 +659,29 @@ repeat_schedule:
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
 		randomnumber %= maxticketvalue;  
 		randomnumber++;
-		
+
 		//Start of rescheduling part
 		list_for_each(tmp, &runqueue_head) 
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu))
 			{
-				if(p->nr_tickets >= randomnumber)
+				if(p->nr_tickets >= randomnumber && p->group_flag==1)
 				{
 					next=p;
+					rungid = p->gid;
 					break;
 				}
 			}
+		}
+		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
+		{
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (p->gid == rungid)
+			{
+				p->group_flag=0;
+			}
+			
 		}
 	}
 	else if (gticket_policy==0)
