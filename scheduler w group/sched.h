@@ -426,7 +426,7 @@ struct task_struct {
 
 /* journalling filesystem info */
 	void *journal_info;
-/*gticket info*/
+/* gticket info */
 	int nr_tickets;
 	int last_reached;
 	int group_flag;

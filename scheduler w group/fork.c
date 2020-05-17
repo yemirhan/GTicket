@@ -662,8 +662,9 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->tty_old_pgrp = 0;
 	p->times.tms_utime = p->times.tms_stime = 0;
 	p->times.tms_cutime = p->times.tms_cstime = 0;
+	/* Setting the GTicket variables for fork() function */
 	p->last_reached = jiffies;
-	p->nr_tickets = 8;
+	p->nr_tickets = 8; //Every process starts with 8 tickets
 	p->group_flag = 1;
 #ifdef CONFIG_SMP
 	{
