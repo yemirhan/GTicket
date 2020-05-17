@@ -607,6 +607,7 @@ repeat_schedule:
 	/*
 	 * Default process to select..
 	 */
+	next = idle_task(this_cpu);
 	if (gticket_policy==1){
 		if (enflag==0)
 		{
@@ -632,7 +633,6 @@ repeat_schedule:
 
 		int maxticketvalue=0,gflagsum=0;
 		unsigned int randomnumber;
-		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (can_schedule(p, this_cpu)) {
@@ -682,7 +682,6 @@ repeat_schedule:
 	}
 	else if (gticket_policy==0)
 	{
-		next = idle_task(this_cpu);
 		c = -1000;
 		list_for_each(tmp, &runqueue_head) {
 			p = list_entry(tmp, struct task_struct, run_list);
