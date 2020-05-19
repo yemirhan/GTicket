@@ -428,7 +428,7 @@ struct task_struct {
 	void *journal_info;
 /* gticket info */
 	int nr_tickets;
-	int last_reached;
+	unsigned long last_reached;
 	int group_flag;
 };
 

@@ -665,7 +665,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	/* Setting the GTicket variables for fork() function */
 	p->last_reached = jiffies;
 	p->nr_tickets = 8; //Every process starts with 8 tickets
-	p->group_flag = 1;
+	p->group_flag = 0;
 #ifdef CONFIG_SMP
 	{
 		int i;

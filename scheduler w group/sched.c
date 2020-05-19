@@ -41,7 +41,6 @@ extern void timer_bh(void);
 extern void tqueue_bh(void);
 extern void immediate_bh(void);
 extern int gticket_policy;
-int enflag=0;
 
 /*
  * scheduler variables
@@ -609,29 +608,25 @@ repeat_schedule:
 	 */
 	next = idle_task(this_cpu);
 	if (gticket_policy==1){
-		if (enflag==0)
-		{
-			printk("Gticked enabled!");
-			enflag++;
-		}
+		rungid =NULL;
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
-			if((jiffies)-p->last_reached<MIN_TIME){ //Decrement ticket value if cpu wait<20
-				if(p->nr_tickets>=MIN_TICKETS){
+			if(((jiffies)-p->last_reached)<20){ //Decrement ticket value if cpu wait<20
+				if(p->nr_tickets>1){
 					p->nr_tickets=p->nr_tickets-1;
 					p->last_reached=jiffies;
 				}
 			}
-			else if((jiffies)-p->last_reached>MAX_TIME){ //Increment ticket value if cpu wait >200
-				if(p->nr_tickets<=MAX_TICKETS){
+			else if(((jiffies)-p->last_reached)>200){ //Increment ticket value if cpu wait >200
+				if(p->nr_tickets<15){
 					p->nr_tickets=p->nr_tickets+1;
 					p->last_reached=jiffies;
 				}
 			}
 		} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
 
-		int maxticketvalue=0,gflagsum=0;
-		unsigned int randomnumber;
+		int maxticketvalue=1,gflagsum=0;
+		int randomnumber;
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (p->nr_tickets > maxticketvalue)
@@ -651,8 +646,9 @@ repeat_schedule:
 
 		//Get a random number from 1 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
+		randomnumber = (randomnumber < 0) ? -randomnumber : randomnumber;
 		randomnumber %= maxticketvalue;  
-		randomnumber++;
+		randomnumber = (randomnumber == 0) ? randomnumber++ : randomnumber;
 
 		//Start of rescheduling part
 		list_for_each(tmp, &runqueue_head) 
