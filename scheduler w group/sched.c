@@ -617,13 +617,13 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
 			if((jiffies)-p->last_reached<MIN_TIME){ //Decrement ticket value if cpu wait<20
-				if(p->nr_tickets>MIN_TICKETS){
+				if(p->nr_tickets>=MIN_TICKETS){
 					p->nr_tickets=p->nr_tickets-1;
 					p->last_reached=jiffies;
 				}
 			}
 			else if((jiffies)-p->last_reached>MAX_TIME){ //Increment ticket value if cpu wait >200
-				if(p->nr_tickets<MAX_TICKETS){
+				if(p->nr_tickets<=MAX_TICKETS){
 					p->nr_tickets=p->nr_tickets+1;
 					p->last_reached=jiffies;
 				}
@@ -634,7 +634,7 @@ repeat_schedule:
 		unsigned int randomnumber;
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (p->nr_tickets >= maxticketvalue)
+			if (p->nr_tickets > maxticketvalue)
 			{
 				gflagsum+=p->group_flag; //Get if there are still groups to schedule
 				maxticketvalue = p->nr_tickets;
@@ -648,9 +648,6 @@ repeat_schedule:
 				p->group_flag=1;
 			}
 		}
-		
-		if(maxticketvalue==0)
-			return NULL;
 
 		//Get a random number from 1 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
