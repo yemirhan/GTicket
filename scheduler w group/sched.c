@@ -33,6 +33,7 @@
 #include <linux/completion.h>
 #include <linux/prefetch.h>
 #include <linux/compiler.h>
+#include <linux/random.h>
 
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
@@ -41,7 +42,6 @@ extern void timer_bh(void);
 extern void tqueue_bh(void);
 extern void immediate_bh(void);
 extern int gticket_policy;
-
 /*
  * scheduler variables
  */
@@ -606,21 +606,27 @@ repeat_schedule:
 	/*
 	 * Default process to select..
 	 */
-	next = idle_task(this_cpu);
+	if (gticket_policy==0)
+	{
+		goto lessthan;
+	}
+	
 	if (gticket_policy==1){
-		rungid =NULL;
+		next = idle_task(this_cpu);
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
-			if(((jiffies)-p->last_reached)<20){ //Decrement ticket value if cpu wait<20
-				if(p->nr_tickets>1){
-					p->nr_tickets=p->nr_tickets-1;
-					p->last_reached=jiffies;
+			if(p->gid > 500){
+				if(((jiffies)-p->last_reached)<20){ //Decrement ticket value if cpu wait<20
+					if(p->nr_tickets>1){
+						p->nr_tickets=p->nr_tickets-1;
+						p->last_reached=jiffies;
+					}
 				}
-			}
-			else if(((jiffies)-p->last_reached)>200){ //Increment ticket value if cpu wait >200
-				if(p->nr_tickets<15){
-					p->nr_tickets=p->nr_tickets+1;
-					p->last_reached=jiffies;
+				else if(((jiffies)-p->last_reached)>200){ //Increment ticket value if cpu wait >200
+					if(p->nr_tickets<15){
+						p->nr_tickets=p->nr_tickets+1;
+						p->last_reached=jiffies;
+					}
 				}
 			}
 		} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
@@ -629,7 +635,7 @@ repeat_schedule:
 		int randomnumber;
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (p->nr_tickets > maxticketvalue)
+			if (p->nr_tickets > maxticketvalue && can_schedule(p, this_cpu))
 			{
 				gflagsum+=p->group_flag; //Get if there are still groups to schedule
 				maxticketvalue = p->nr_tickets;
@@ -648,15 +654,19 @@ repeat_schedule:
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
 		randomnumber = (randomnumber < 0) ? -randomnumber : randomnumber;
 		randomnumber %= maxticketvalue;  
-		randomnumber = (randomnumber == 0) ? randomnumber++ : randomnumber;
+		randomnumber++;
 
 		//Start of rescheduling part
 		list_for_each(tmp, &runqueue_head) 
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
+			if(p->gid <= 500){
+				goto lessthan;
+			}
 			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
 			{
 				next=p;
+				p->last_reached=jiffies;
 				rungid = p->gid;
 				break;
 			}
@@ -664,39 +674,41 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (p->gid == rungid)
+			if (p->gid == rungid && can_schedule(p, this_cpu))
 			{
 				p->group_flag=0;
 			}
 			
 		}
-	}
-	else if (gticket_policy==0)
-	{
-		c = -1000;
-		list_for_each(tmp, &runqueue_head) {
-			p = list_entry(tmp, struct task_struct, run_list);
-			if (can_schedule(p, this_cpu)) {
-				int weight = goodness(p, this_cpu, prev->active_mm);
-				if (weight > c)
-					c = weight, next = p;
-			}
-		}
-
-		/* Do we need to re-calculate counters? */
-		if (unlikely(!c)) {
-			struct task_struct *p;
-
-			spin_unlock_irq(&runqueue_lock);
-			read_lock(&tasklist_lock);
-			for_each_task(p)
-				p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
-			read_unlock(&tasklist_lock);
-			spin_lock_irq(&runqueue_lock);
-			goto repeat_schedule;
-		}
+		goto endgticket;
 	}
 	
+lessthan:
+	next = idle_task(this_cpu);
+	c = -1000;
+	list_for_each(tmp, &runqueue_head) {
+		p = list_entry(tmp, struct task_struct, run_list);
+		if (can_schedule(p, this_cpu)) {
+			int weight = goodness(p, this_cpu, prev->active_mm);
+			if (weight > c)
+				c = weight, next = p;
+		}
+	}
+
+	/* Do we need to re-calculate counters? */
+	if (unlikely(!c)) {
+		struct task_struct *p;
+
+		spin_unlock_irq(&runqueue_lock);
+		read_lock(&tasklist_lock);
+		for_each_task(p)
+			p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
+		read_unlock(&tasklist_lock);
+		spin_lock_irq(&runqueue_lock);
+		goto repeat_schedule;
+	}
+	
+endgticket:
 	
 
 	/*
