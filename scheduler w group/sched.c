@@ -619,13 +619,11 @@ repeat_schedule:
 				if(((jiffies)-p->last_reached)<20){ //Decrement ticket value if cpu wait<20
 					if(p->nr_tickets>1){
 						p->nr_tickets=p->nr_tickets-1;
-						p->last_reached=jiffies;
 					}
 				}
 				else if(((jiffies)-p->last_reached)>200){ //Increment ticket value if cpu wait >200
 					if(p->nr_tickets<15){
 						p->nr_tickets=p->nr_tickets+1;
-						p->last_reached=jiffies;
 					}
 				}
 			}
@@ -679,6 +677,7 @@ repeat_schedule:
 			}
 			
 		}
+		next->last_reached=jiffies;
 		goto endgticket;
 	}
 	

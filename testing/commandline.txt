@@ -1,9 +1,0 @@
-top -n 100 -b >> output.txt
-cat output1.txt output2.txt output3.txt output4.txt output5.txt output6.txt output7.txt output8.txt output9.txt output10.txt >> outputall.txt
-outputall.txt | grep -o "user1.*a.out" >> user1.txt 
-outputall.txt | grep -o "user2.*b.out" >> user2.txt 
-outputall.txt | grep -o "user3.*a.out" >> user3a.txt 
-outputall.txt | grep -o "user3.*b.out" >> user3b.txt 
-outputall.txt | grep -o "user4.*a.out" >> user4.txt 
-
-
