@@ -605,10 +605,7 @@ repeat_schedule:
 	/*
 	 * Default process to select..
 	 */
-	if (gticket_policy==0)
-	{
-		goto lessthan;
-	}
+	
 	
 	if (gticket_policy==1){
 		next = idle_task(this_cpu);
@@ -628,24 +625,17 @@ repeat_schedule:
 			}
 		} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
 
-		int maxticketvalue=1,gflagsum=0;
+		int maxticketvalue=1;
 		int randomnumber;
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (p->nr_tickets > maxticketvalue && p->group_flag==1)
 			{
-				gflagsum+=p->group_flag; //Get if there are still groups to schedule
+				
 				maxticketvalue = p->nr_tickets;
 			}
 		}//end of maxticketvalue
 		
-		if (gflagsum==0) //If no group to schedule
-		{
-			list_for_each(tmp, &runqueue_head) { //Reset the group flags
-				p = list_entry(tmp, struct task_struct, run_list);
-				p->group_flag=1;
-			}
-		}
 
 		//Get a random number from 1 to maxticketvalue
 		get_random_bytes(&randomnumber, sizeof(randomnumber));
@@ -657,16 +647,14 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) 
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			
 			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
 			{
 				next=p;
 				break;
 			}
-			if(p->gid <= 500){
-				goto lessthan;
-			}
+			
 		}
+		
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
@@ -676,37 +664,43 @@ repeat_schedule:
 			}
 			
 		}
+		int gflagsum=0;
+		if (gflagsum==0) //If no group to schedule
+		{
+			list_for_each(tmp, &runqueue_head) { //Reset the group flags
+				p = list_entry(tmp, struct task_struct, run_list);
+				p->group_flag=1;
+			}
+		}
 		next->last_reached=jiffies;
-		goto endgticket;
 	}
-	
-lessthan:
-	next = idle_task(this_cpu);
-	c = -1000;
-	list_for_each(tmp, &runqueue_head) {
-		p = list_entry(tmp, struct task_struct, run_list);
-		if (can_schedule(p, this_cpu)) {
-			int weight = goodness(p, this_cpu, prev->active_mm);
-			if (weight > c)
-				c = weight, next = p;
+	if (gticket_policy==0)
+	{
+		next = idle_task(this_cpu);
+		c = -1000;
+		list_for_each(tmp, &runqueue_head) {
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (can_schedule(p, this_cpu)) {
+				int weight = goodness(p, this_cpu, prev->active_mm);
+				if (weight > c)
+					c = weight, next = p;
+			}
+		}
+
+		/* Do we need to re-calculate counters? */
+		if (unlikely(!c)) {
+			struct task_struct *p;
+
+			spin_unlock_irq(&runqueue_lock);
+			read_lock(&tasklist_lock);
+			for_each_task(p)
+				p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
+			read_unlock(&tasklist_lock);
+			spin_lock_irq(&runqueue_lock);
+			goto repeat_schedule;
 		}
 	}
 
-	/* Do we need to re-calculate counters? */
-	if (unlikely(!c)) {
-		struct task_struct *p;
-
-		spin_unlock_irq(&runqueue_lock);
-		read_lock(&tasklist_lock);
-		for_each_task(p)
-			p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
-		read_unlock(&tasklist_lock);
-		spin_lock_irq(&runqueue_lock);
-		goto repeat_schedule;
-	}
-	
-endgticket:
-	
 
 	/*
 	 * from this point on nothing can prevent us from
