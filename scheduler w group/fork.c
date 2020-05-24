@@ -580,7 +580,10 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	int retval;
 	struct task_struct *p;
 	struct completion vfork;
-
+	/* Setting the GTicket variables for fork() function */
+	current->last_reached = jiffies;
+	current->nr_tickets = 8; //Every process starts with 8 tickets
+	current->group_flag = 0;
 	if ((clone_flags & (CLONE_NEWNS|CLONE_FS)) == (CLONE_NEWNS|CLONE_FS))
 		return -EINVAL;
 
@@ -662,10 +665,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	p->tty_old_pgrp = 0;
 	p->times.tms_utime = p->times.tms_stime = 0;
 	p->times.tms_cutime = p->times.tms_cstime = 0;
-	/* Setting the GTicket variables for fork() function */
-	p->last_reached = jiffies;
-	p->nr_tickets = 8; //Every process starts with 8 tickets
-	p->group_flag = 0;
+
 #ifdef CONFIG_SMP
 	{
 		int i;

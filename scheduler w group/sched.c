@@ -610,77 +610,75 @@ repeat_schedule:
 		goto lessthan;
 	}
 	
-	next = idle_task(this_cpu);
-	list_for_each(tmp, &runqueue_head) { //Ticket Update
-		p = list_entry(tmp, struct task_struct, run_list);
-		if(((jiffies)-p->last_reached)<20){ //Decrement ticket value if cpu wait<20
-			if(p->nr_tickets>1){
-				p->nr_tickets=p->nr_tickets-1;
-			}
-		}
-		else if(((jiffies)-p->last_reached)>200){ //Increment ticket value if cpu wait >200
-			if(p->nr_tickets<15){
-				p->nr_tickets=p->nr_tickets+1;
-			}
-		}
-	} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
-
-	int maxticketvalue=1;
-	int randomnumber;
-	list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
-		p = list_entry(tmp, struct task_struct, run_list);
-		if (can_schedule(p, this_cpu) && p->nr_tickets > maxticketvalue && p->group_flag==1)
-		{
-			maxticketvalue = p->nr_tickets;
-		}
-	}//end of maxticketvalue
-	
-
-	//Get a random number from 1 to maxticketvalue
-	get_random_bytes(&randomnumber, sizeof(randomnumber));
-	randomnumber = (randomnumber < 0) ? -randomnumber : randomnumber;
-	randomnumber %= maxticketvalue;  
-	randomnumber++;
-
-	//Start of rescheduling part
-	list_for_each(tmp, &runqueue_head) 
-	{
-		p = list_entry(tmp, struct task_struct, run_list);
-		
-		if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
-		{
-			next=p;
-			break;
-		}
-		if(p->gid <= 500){
-			goto lessthan;
-		}
-	}
-	list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
-	{
-		p = list_entry(tmp, struct task_struct, run_list);
-		if (p->gid == next->gid)
-		{
-			p->group_flag=0;
-		}
-		
-	}
-	int gflagsum = 0;
-	list_for_each(tmp, &runqueue_head)
-	{
-		p = list_entry(tmp, struct task_struct, run_list);
-		gflagsum += p->group_flag;
-	}
-	if (gflagsum==0) //If no group to schedule
-	{
-		list_for_each(tmp, &runqueue_head) { //Reset the group flags
+	if (gticket_policy==1){
+		next = idle_task(this_cpu);
+		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
-			p->group_flag=1;
-		}
-	}
-	next->last_reached=jiffies;
-	goto endgticket;
+			if(p->gid > 500){
+				if(((jiffies)-p->last_reached)<2){ //Decrement ticket value if cpu wait<20
+					if(p->nr_tickets>1){
+						p->nr_tickets=p->nr_tickets-1;
+					}
+				}
+				else if(((jiffies)-p->last_reached)>20){ //Increment ticket value if cpu wait >200
+					if(p->nr_tickets<15){
+						p->nr_tickets=p->nr_tickets+1;
+					}
+				}
+			}
+		} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
 
+		int maxticketvalue=1,gflagsum=0;
+		int randomnumber;
+		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (p->nr_tickets > maxticketvalue && p->group_flag==1)
+			{
+				gflagsum+=p->group_flag; //Get if there are still groups to schedule
+				maxticketvalue = p->nr_tickets;
+			}
+		}//end of maxticketvalue
+		
+		if (gflagsum==0) //If no group to schedule
+		{
+			list_for_each(tmp, &runqueue_head) { //Reset the group flags
+				p = list_entry(tmp, struct task_struct, run_list);
+				p->group_flag=1;
+			}
+		}
+
+		//Get a random number from 1 to maxticketvalue
+		get_random_bytes(&randomnumber, sizeof(randomnumber));
+		randomnumber = (randomnumber < 0) ? -randomnumber : randomnumber;
+		randomnumber %= maxticketvalue;  
+		randomnumber++;
+
+		//Start of rescheduling part
+		list_for_each(tmp, &runqueue_head) 
+		{
+			p = list_entry(tmp, struct task_struct, run_list);
+			
+			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
+			{
+				next=p;
+				break;
+			}
+			if(p->gid <= 500){
+				goto lessthan;
+			}
+		}
+		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
+		{
+			p = list_entry(tmp, struct task_struct, run_list);
+			if (next->pid == p ->gid)
+			{
+				p->group_flag=0;
+			}
+			
+		}
+		next->last_reached=jiffies;
+		goto endgticket;
+	}
 	
 lessthan:
 	next = idle_task(this_cpu);
