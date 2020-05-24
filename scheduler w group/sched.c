@@ -635,7 +635,7 @@ repeat_schedule:
 		int randomnumber;
 		list_for_each(tmp, &runqueue_head) { //Obtain the maximum ticket value from task_struct
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (p->nr_tickets > maxticketvalue && can_schedule(p, this_cpu))
+			if (p->nr_tickets > maxticketvalue)
 			{
 				gflagsum+=p->group_flag; //Get if there are still groups to schedule
 				maxticketvalue = p->nr_tickets;
@@ -666,7 +666,6 @@ repeat_schedule:
 			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
 			{
 				next=p;
-				p->last_reached=jiffies;
 				rungid = p->gid;
 				break;
 			}
@@ -674,7 +673,7 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (p->gid == rungid && can_schedule(p, this_cpu))
+			if (p->gid == rungid)
 			{
 				p->group_flag=0;
 			}
