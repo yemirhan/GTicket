@@ -6,7 +6,7 @@ int main(int argc, char const *argv[])
     printf("started");
     while(1) {
         count++;
-        if(count > 18000000000)
+        if(count > 5800000000)
             break;
     }
     printf("stopped");
