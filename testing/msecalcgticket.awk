@@ -1,10 +1,19 @@
 #! /usr/bin/awk -f 
 
-#use BEGIN sepecial character to set FS built-in variable
-BEGIN { FS=" "; sum=0; linecnt=0;expected=20} 
+BEGIN { FS=" "; sum=0; linecnt=0;expected=33;ln1;ln2} 
 {
-#search for username: aaronkilik and print account details 
-sum = sum+(expected -$8)*(expected -$8);
-linecnt++;
+
+if(NR == FNR){
+    ln1 = $8;
 }
-END {print"mse for " $1 " with process " $12 " is: " sum/linecnt}
+else{
+    ln2 = $8;       
+}
+if (ln1 > 1 || ln1 > 1) {
+    sum = sum+(ln1+ln2-expected)*(ln1+ln2-expected);
+    linecnt++;
+    }
+}
+END {print"mse for " $12 " is: " sum/(linecnt*100), linecnt}
+
+
