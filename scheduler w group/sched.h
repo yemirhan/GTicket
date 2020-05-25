@@ -4,11 +4,7 @@
 	EXACT PLACE OF THIS FILE IS
 		/usr/include/linux
 */
-#define MIN_TICKETS 1
-#define MAX_TICKETS 15
-#define INIT_TICKETS 8
-#define MIN_TIME 20
-#define MAX_TIME 200
+
 #include <asm/param.h>	/* for HZ */
 
 extern unsigned long event;
@@ -428,7 +424,7 @@ struct task_struct {
 	void *journal_info;
 /* gticket info */
 	int nr_tickets;
-	unsigned long last_reached;
+	long last_reached;
 	int group_flag;
 };
 

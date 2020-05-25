@@ -34,6 +34,7 @@
 #include <linux/prefetch.h>
 #include <linux/compiler.h>
 #include <linux/random.h>
+#include <linux/pteamt.h>
 
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
@@ -606,9 +607,9 @@ repeat_schedule:
 	 * Default process to select..
 	 */
 	
-	
+	next = idle_task(this_cpu);
 	if (gticket_policy==1){
-		next = idle_task(this_cpu);
+		
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
 			if(p->gid > 500){
@@ -631,7 +632,6 @@ repeat_schedule:
 			p = list_entry(tmp, struct task_struct, run_list);
 			if (p->nr_tickets > maxticketvalue && p->group_flag==1)
 			{
-				
 				maxticketvalue = p->nr_tickets;
 			}
 		}//end of maxticketvalue
@@ -658,13 +658,19 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (next->pid == p ->gid)
+			if (next->gid == p ->gid)
 			{
 				p->group_flag=0;
 			}
 			
 		}
 		int gflagsum=0;
+		list_for_each(tmp, &runqueue_head) 
+		{
+			p = list_entry(tmp, struct task_struct, run_list);
+			gflagsum+=p->group_flag;
+			
+		}
 		if (gflagsum==0) //If no group to schedule
 		{
 			list_for_each(tmp, &runqueue_head) { //Reset the group flags
@@ -676,7 +682,6 @@ repeat_schedule:
 	}
 	if (gticket_policy==0)
 	{
-		next = idle_task(this_cpu);
 		c = -1000;
 		list_for_each(tmp, &runqueue_head) {
 			p = list_entry(tmp, struct task_struct, run_list);
