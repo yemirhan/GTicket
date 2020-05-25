@@ -612,19 +612,17 @@ repeat_schedule:
 		
 		list_for_each(tmp, &runqueue_head) { //Ticket Update
 			p = list_entry(tmp, struct task_struct, run_list);
-			if(p->gid > 500){
-				if(((jiffies)-p->last_reached)<2){ //Decrement ticket value if cpu wait<20
-					if(p->nr_tickets>1){
-						p->nr_tickets=p->nr_tickets-1;
-					}
-				}
-				else if(((jiffies)-p->last_reached)>20){ //Increment ticket value if cpu wait >200
-					if(p->nr_tickets<15){
-						p->nr_tickets=p->nr_tickets+1;
-					}
+			if(((jiffies)-p->last_reached)<2){ //Decrement ticket value if cpu wait<20
+				if(p->nr_tickets>1){
+					p->nr_tickets=p->nr_tickets-1;
 				}
 			}
-		} //MAX_TIME MIN_TIME MAX_TICKETS MIN_TICKETS declared in sched.h 
+			else if(((jiffies)-p->last_reached)>20){ //Increment ticket value if cpu wait >200
+				if(p->nr_tickets<15){
+					p->nr_tickets=p->nr_tickets+1;
+				}
+			}
+		} 
 
 		int maxticketvalue=1;
 		int randomnumber;
@@ -650,6 +648,7 @@ repeat_schedule:
 			if (can_schedule(p, this_cpu) && p->nr_tickets >= randomnumber && p->group_flag==1)
 			{
 				next=p;
+				next->last_reached=jiffies;
 				break;
 			}
 			
@@ -658,14 +657,14 @@ repeat_schedule:
 		list_for_each(tmp, &runqueue_head) //Set all the group flags of a group 0
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
-			if (next->gid == p ->gid)
+			if (next->gid == p->gid)
 			{
 				p->group_flag=0;
 			}
 			
 		}
 		int gflagsum=0;
-		list_for_each(tmp, &runqueue_head) 
+		list_for_each(tmp, &runqueue_head) //Check all of the group flags
 		{
 			p = list_entry(tmp, struct task_struct, run_list);
 			gflagsum+=p->group_flag;
@@ -678,7 +677,7 @@ repeat_schedule:
 				p->group_flag=1;
 			}
 		}
-		next->last_reached=jiffies;
+		
 	}
 	if (gticket_policy==0)
 	{
